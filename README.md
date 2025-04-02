@@ -169,9 +169,9 @@ Content-Type: application/json
   "type": "CloudflareChallenge",
   "url": "https://example.com",
   "userAgent": "...",
-    "wssocks": {
-      "url": "https://ws.zetx.tech",
-      "token": "example_connector_token"
-    }
+  "wssocks": {
+    "url": "https://ws.zetx.tech",
+    "token": "example_connector_token"
+  }
 }
 ```
