@@ -114,19 +114,30 @@ def main(argl: List[str] = None, ready: threading.Event = None, log: bool = True
     parser.add_argument("-P", "--port", type=int, default=3000, help="Server listen port")
     parser.add_argument("-H", "--host", default="localhost", help="Server listen host")
     parser.add_argument("-T", "--timeout", type=int, default=120, help="Maximum task timeout in seconds")
+    parser.add_argument("-L", "--headless", action="store_true", help="Run browser in headless mode")
     
     args = parser.parse_args(argl)
+    
+    if args.headless:
+        from pyvirtualdisplay import Display
 
-    instance_pool = InstancePool(size=args.maxTasks, timeout=args.timeout)
-    instance_pool.init_instances()
-    
-    if ready:
-        ready.set()
-    
+        display = Display(visible=0, size=(1920, 1080))
+        display.start()
+
     try:
-        uvicorn.run(app, host=args.host, port=args.port, log_config=None, log_level=None)
+        instance_pool = InstancePool(size=args.maxTasks, timeout=args.timeout)
+        instance_pool.init_instances()
+        
+        if ready:
+            ready.set()
+        
+        try:
+            uvicorn.run(app, host=args.host, port=args.port, log_config=None, log_level=None)
+        finally:
+            instance_pool.stop()
     finally:
-        instance_pool.stop()
+        if args.headless:
+            display.stop()
 
 if __name__ == '__main__':
     main()
