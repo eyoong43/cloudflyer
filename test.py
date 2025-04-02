@@ -1,94 +1,191 @@
+from threading import Thread
+import threading
 import time
-import logging
-import os
-from CloudflareBypasser import CloudflareBypasser
-from DrissionPage import ChromiumPage, ChromiumOptions
+import argparse
+import json
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('cloudflare_bypass.log', mode='w')
-    ]
-)
+from curl_cffi import requests
 
-def get_chromium_options(browser_path: str, arguments: list) -> ChromiumOptions:
-    """
-    Configures and returns Chromium options.
-    
-    :param browser_path: Path to the Chromium browser executable.
-    :param arguments: List of arguments for the Chromium browser.
-    :return: Configured ChromiumOptions instance.
-    """
-    options = ChromiumOptions().auto_port()
-    options.set_paths(browser_path=browser_path)
-    for argument in arguments:
-        options.set_argument(argument)
-    return options
+from cloudflyer.server import main, stop_instances
 
-def main():
-    # Chromium Browser Path
-    isHeadless = os.getenv('HEADLESS', 'false').lower() == 'true'
-    
-    if isHeadless:
-        from pyvirtualdisplay import Display
+EXAMPLE_TOKEN = "example_token"
 
-        display = Display(visible=0, size=(1920, 1080))
-        display.start()
 
-    browser_path = os.getenv('CHROME_PATH', "/usr/bin/google-chrome")
-    
-    # Windows Example
-    # browser_path = os.getenv('CHROME_PATH', r"C:/Program Files/Google/Chrome/Application/chrome.exe")
-
-    # Arguments to make the browser better for automation and less detectable.
-    arguments = [
-        "-no-first-run",
-        "-force-color-profile=srgb",
-        "-metrics-recording-only",
-        "-password-store=basic",
-        "-use-mock-keychain",
-        "-export-tagged-pdf",
-        "-no-default-browser-check",
-        "-disable-background-mode",
-        "-enable-features=NetworkService,NetworkServiceInProcess,LoadCryptoTokenExtension,PermuteTLSExtensions",
-        "-disable-features=FlashDeprecationWarning,EnablePasswordsAccountStorage",
-        "-deny-permission-prompts",
-        "-disable-gpu",
-        "-accept-lang=en-US",
-    ]
-
-    options = get_chromium_options(browser_path, arguments)
-
-    # Initialize the browser
-    driver = ChromiumPage(addr_or_opts=options)
+def verify_cloudflare_challenge(result):
     try:
-        logging.info('Navigating to the demo page.')
-        driver.get('https://nopecha.com/demo/cloudflare')
+        # Extract necessary information from response
+        cookies = result["response"]["cookies"]
+        headers = result["response"]["headers"]
+        url = result["data"]["url"]
 
-        # Where the bypass starts
-        logging.info('Starting Cloudflare bypass.')
-        cf_bypasser = CloudflareBypasser(driver)
+        # Use curl_cffi to send request
+        response = requests.get(
+            url,
+            cookies=cookies,
+            headers={"User-Agent": headers["User-Agent"]},
+            impersonate="chrome",
+            allow_redirects=True,
+        )
 
-        # If you are solving an in-page captcha (like the one here: https://seleniumbase.io/apps/turnstile), use cf_bypasser.click_verification_button() directly instead of cf_bypasser.bypass().
-        # It will automatically locate the button and click it. Do your own check if needed.
+        # Check if response contains success marker
+        return "Captcha is passed successfully!" in response.text
+    except (KeyError, TypeError):
+        return False
 
-        cf_bypasser.bypass()
 
-        logging.info("Enjoy the content!")
-        logging.info("Title of the page: %s", driver.title)
+def create_task(data):
+    headers = {"Content-Type": "application/json"}
+    response = requests.post("http://127.0.0.1:3000/createTask", json=data, headers=headers)
+    return response.json()
 
-        # Sleep for a while to let the user see the result if needed
-        time.sleep(5)
-    except Exception as e:
-        logging.error("An error occurred: %s", str(e))
+
+def get_task_result(task_id, client_key="123456"):
+    headers = {"Content-Type": "application/json"}
+
+    data = {"clientKey": client_key, "taskId": task_id}
+
+    response = requests.post(
+        "http://localhost:3000/getTaskResult",
+        json=data,
+        headers=headers,
+    )
+    return response.json()
+
+
+def start_server():
+    ready = threading.Event()
+    t = Thread(
+        target=main,
+        kwargs={
+            "argl": ["-K", EXAMPLE_TOKEN],
+            "ready": ready,
+            "log": False,
+        },
+        daemon=True,
+    )
+    t.start()
+    ready.wait()
+    return t
+
+
+def poll_task_result(task_id) -> dict:
+    while True:
+        cf_response = get_task_result(task_id)
+        if cf_response["status"] == "completed":
+            return cf_response["result"]
+        time.sleep(3)
+
+
+def cloudflare_challenge(proxy=None):
+    start_server()
+
+    data = {
+        "clientKey": EXAMPLE_TOKEN,
+        "type": "CloudflareChallenge",
+        "url": "https://2captcha.com/demo/cloudflare-turnstile-challenge",
+        "userAgent": "CFNetwork/897.15 Darwin/17.5.0 (iPhone/6s iOS/11.3)",
+    }
+    
+    # Add proxy configuration if provided
+    if proxy:
+        data["proxy"] = proxy
+
+    task_info = create_task(data)
+    result = poll_task_result(task_info["taskId"])
+    print(f"Challenge result:\n{json.dumps(result, indent=2)}")
+
+    success = verify_cloudflare_challenge(result)
+    print(f"\nChallenge verification result:\n{success}")
+
+
+def turnstile(proxy=None):
+    start_server()
+
+    data = {
+        "clientKey": EXAMPLE_TOKEN,
+        "type": "Turnstile",
+        "url": "https://www.coronausa.com",
+        "siteKey": "0x4AAAAAAAH4-VmiV_O_wBN-",
+    }
+
+    # Add proxy configuration if provided
+    if proxy:
+        data["proxy"] = proxy
+
+    task_info = create_task(data)
+    result = poll_task_result(task_info["taskId"])
+    print(f"Turnstile result:\n{json.dumps(result, indent=2)}")
+
+
+    response = result.get("response")
+    if response:
+        token = response.get("token")
+    else:
+        token = None
+    if token:
+        print(f"\nTurnstile token:\n{token}")
+
+def recapcha_invisible(proxy=None):
+    start_server()
+
+    data = {
+        "clientKey": EXAMPLE_TOKEN,
+        "type": "RecaptchaInvisible",
+        "url": "https://antcpt.com/score_detector",
+        "siteKey": "6LcR_okUAAAAAPYrPe-HK_0RULO1aZM15ENyM-Mf",
+        "action": "homepage",
+    }
+
+    # Add proxy configuration if provided
+    if proxy:
+        data["proxy"] = proxy
+
+    task_info = create_task(data)
+    result = poll_task_result(task_info["taskId"])
+    print(f"Challenge result:\n{json.dumps(result, indent=2)}")
+
+def parse_proxy_string(proxy_str):
+    """Parse proxy string in format scheme://host:port"""
+    if not proxy_str:
+        return None
+    
+    try:
+        scheme, rest = proxy_str.split('://')
+        host, port = rest.split(':')
+        return {
+            "scheme": scheme,
+            "host": host,
+            "port": int(port)
+        }
+    except (ValueError, AttributeError):
+        raise ValueError("Invalid proxy format. Use scheme://host:port (e.g., socks5://127.0.0.1:1080)")
+
+def main_cli():
+    parser = argparse.ArgumentParser(description="Challenge solver CLI")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Add proxy argument to each command
+    for cmd in ["turnstile", "cloudflare", "recaptcha"]:
+        parser_cmd = subparsers.add_parser(cmd, help=f"Solve {cmd.replace('_', ' ')} challenge")
+        parser_cmd.add_argument("-x", "--proxy", help="Proxy in format scheme://host:port (e.g., socks5://127.0.0.1:1080)")
+
+    args = parser.parse_args()
+
+    # Parse proxy string if provided
+    proxy = parse_proxy_string(args.proxy) if args.proxy else None
+
+    # Execute corresponding function based on command
+    try:
+        if args.command == "turnstile":
+            turnstile(proxy)
+        elif args.command == "cloudflare":
+            cloudflare_challenge(proxy)
+        elif args.command == "recaptcha":
+            recapcha_invisible(proxy)
+        else:
+            parser.print_help()
     finally:
-        logging.info('Closing the browser.')
-        driver.quit()
-        if isHeadless:
-            display.stop()
+        stop_instances()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    main_cli()

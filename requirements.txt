@@ -1,1 +1,9 @@
+fastapi
+pydantic==2.7.4
+uvicorn
+PyVirtualDisplay
 DrissionPage==4.0.5.6
+mitmproxy==11.0.2
+pproxy==2.7.9
+cachetools
+loguru

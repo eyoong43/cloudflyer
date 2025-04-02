@@ -1,120 +1,177 @@
+# Cloudflyer
 
-# Cloudflare Turnstile Page & Captcha Bypass for Scraping
+Cloudflyer is a Python service that helps solve various web security challenges including Cloudflare challenges, Turnstile captchas, and reCAPTCHA Invisible.
 
-**We love scraping, don't we?** But sometimes, we face Cloudflare protection. This script is designed to bypass the Cloudflare protection on websites, allowing you to interact with them programmatically. 
+## Features
 
-# Sponsors
-### [Capsolver](https://www.capsolver.com/?utm_source=github&utm_medium=ads&utm_campaign=scraping&utm_term=CloudflareBypassForScraping)
-
-[![Capsolver](docs/capsolver.png)](https://www.capsolver.com/?utm_source=github&utm_medium=ads&utm_campaign=scraping&utm_term=CloudflareBypassForScraping)
-
-# How does this script work?
-
-If you use Selenium, you may have noticed that it is not possible to bypass Cloudflare protection with it. Even you click the "I'm not a robot" button, you will still be stuck in the "Checking your browser before accessing" page.
-This is because Cloudflare protection is able to detect the automation tools and block them, which puts the webdriver infinitely in the "Checking your browser before accessing" page.
-
-As you realize, the script uses the DrissionPage, which is a controller for the browser itself. This way, the browser is not detected as a webdriver and the Cloudflare protection is bypassed.
-
+- Cloudflare challenge solver
+- Turnstile captcha solver
+- reCAPTCHA Invisible solver
+- Proxy support (HTTP/SOCKS)
+- Concurrent task processing
+- RESTful API server
 
 ## Installation
 
-You can install the required packages by running the following command:
+```bash
+pip install cloudflyer
+```
+
+## Quick Start
+
+### Example Script
 
 ```bash
-pip install -r requirements.txt
+# Run example cloudflare solving with proxy
+python test.py cloudflare -x socks5://127.0.0.1:1080
+
+# Run example turnstile solving
+python test.py turnstile
+
+# Run example recaptcha invisible solving
+python test.py recaptcha
 ```
 
-## Demo
-![](https://cdn.sarperavci.com/xWhiMOmD/vzJylR.gif)
-
-## Usage
-
-Create a new instance of the `CloudflareBypass` class and call the `bypass` method when you need to bypass the Cloudflare protection.
-
-```python
-from CloudflareBypasser import CloudflareBypasser
-from DrissionPage import ChromiumPage
-
-driver = ChromiumPage()
-driver.get('https://nopecha.com/demo/cloudflare')
-
-cf_bypasser = CloudflareBypasser(driver)
-cf_bypasser.bypass()
-```
-
-You can run the test script to see how it works:
+### Solver Server
 
 ```bash
-python test.py
+cloudflyer -K YOUR_CLIENT_KEY
 ```
 
-# Introducing Server Mode
+Options:
+- `-K, --clientKey`: Client API key (required)
+- `-M, --maxTasks`: Maximum concurrent tasks (default: 1)
+- `-P, --port`: Server listen port (default: 3000)
+- `-H, --host`: Server listen host (default: localhost)
+- `-T, --timeout`: Maximum task timeout in seconds (default: 120)
 
-Recently, [@frederik-uni](https://github.com/frederik-uni) has introduced a new feature called "Server Mode". This feature allows you to bypass the Cloudflare protection remotely, either you can get the cookies or the HTML content of the website.
+## API Endpoints for Server
 
-## Installation
+### Create Task
 
-You can install the required packages by running the following command:
+Request:
+
+```
+POST /createTask
+Content-Type: application/json
+
+{
+  "clientKey": "your_client_key",
+  "type": "CloudflareChallenge",
+  "url": "https://example.com",
+  "userAgent": "...",
+  "proxy": {
+    "scheme": "socks5",
+    "host": "127.0.0.1",
+    "port": 1080
+    }
+}
+```
+
+1. `userAgent` and `proxy` is optional.
+2. Supported task types: `CloudflareChallenge`, `Turnstile`, `RecaptchaInvisible`
+3. For `Turnstile` task, `siteKey` is required.
+4. For `RecaptchaInvisible` task, `siteKey` and `action` is required.
+
+Response:
+
+```
+{
+    "taskId": "21dfdca6-fbf5-4313-8ffa-cfc4b8483cc7"
+}
+```
+
+### Get Task Result
+
+Request:
+
+```
+POST /getTaskResult
+Content-Type: application/json
+{
+  "clientKey": "your_client_key",
+  "taskId": "21dfdca6-fbf5-4313-8ffa-cfc4b8483cc7"
+}
+```
+
+Response:
+
+```
+{
+    "status": "completed",
+    "result": {
+        "success": true,
+        "code": 200,
+        "response": {
+            ...
+        },
+        "data": {
+            "type": "CloudflareChallenge",
+            ...(input)
+        }
+    }
+}
+```
+
+For `Turnstile` task:
+
+```
+"response": {
+    "token": "..."
+},
+```
+
+For `CloudflareChallenge` tasks:
+
+```
+"response": {
+    "cookies": {
+        "cf_clearance": "..."
+    },
+    "headers": {
+        "User-Agent": "..."
+    }
+},
+```
+
+For `RecaptchaInvisible` tasks:
+
+```
+"response": {
+    "token": "..."
+},
+```
+
+## WSSocks
+
+[WSSocks](https://github.com/zetxtech/wssocks) is a socks proxy agent for intranet penetration via websocket. It can be used for connecting to the user's network.
+
+For agent proxy:
 
 ```bash
-pip install -r server_requirements.txt
+wssocks server -r -t example_token -a -dd
 ```
 
-## Usage
-
-Start the server by running the following command:
+For user side (using proxy):
 
 ```bash
-python server.py
+wssocks client -u https://ws.zetx.tech -r -t example_token -T 1 -c example_connector_token -dd -E -x socks5://127.0.0.1:1080
 ```
 
-Two endpoints are available:
+For solver side:
 
-- `/cookies?url=<URL>&retries=<>&proxy=<>`: This endpoint returns the cookies of the website (including the Cloudflare cookies).
-- `/html?url=<URL>&retries=<>&proxy=<>`: This endpoint returns the HTML content of the website.
-
-Send a GET request to the desired endpoint with the URL of the website you want to bypass the Cloudflare protection.
-
-```bash
-sarp@IdeaPad:~/$ curl http://localhost:8000/cookies?url=https://nopecha.com/demo/cloudflare
-{"cookies":{"cf_clearance":"SJHuYhHrTZpXDUe8iMuzEUpJxocmOW8ougQVS0.aK5g-1723665177-1.0.1.1-5_NOoP19LQZw4TQ4BLwJmtrXBoX8JbKF5ZqsAOxRNOnW2rmDUwv4hQ7BztnsOfB9DQ06xR5hR_hsg3n8xteUCw"},"user_agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"}
 ```
+POST /createTask
+Content-Type: application/json
 
-## Docker
-
-
-You can also run the server in a Docker container. Thanks to [@gandrunx](https://github.com/gandrunx) for Dockerizing the server.
-
-First, build the Docker image:
-
-```bash
-docker build -t cloudflare-bypass .
+{
+  "clientKey": "your_client_key",
+  "type": "CloudflareChallenge",
+  "url": "https://example.com",
+  "userAgent": "...",
+    "wssocks": {
+      "url": "https://ws.zetx.tech",
+      "token": "example_connector_token"
+    }
+}
 ```
-
-Then, run the Docker container:
-
-```bash
-docker run -p 8000:8000 cloudflare-bypass
-```
-
-Alternatively, you can skip `docker build` step, and run the container using pre-build image:
-```bash
-docker run -p 8000:8000 ghcr.io/sarperavci/cloudflarebypassforscraping:latest
-```
-
-## Example Projects
-
-Here are some example projects that utilize the CloudflareBypasser Server:
-
-- [Calibre Web Automated Book Downloader](https://github.com/calibrain/calibre-web-automated-book-downloader) - A tool to download books from calibre web.
-- [Kick Unofficial API](https://github.com/sarperavci/kick-unofficial-api) - A tool to interact with the Kick.com, download videos, send messages, etc.
-
-## Star History
-
-<a href="https://star-history.com/#sarperavci/CloudflareBypassForScraping&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=sarperavci/CloudflareBypassForScraping&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=sarperavci/CloudflareBypassForScraping&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sarperavci/CloudflareBypassForScraping&type=Date" />
- </picture>
-</a>

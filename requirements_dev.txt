@@ -1,0 +1,5 @@
+pytest
+black
+bump2version
+debugpy
+curl_cffi
