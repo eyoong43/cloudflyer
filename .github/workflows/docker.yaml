@@ -1,8 +1,11 @@
-name: Build and publish a Docker image to ghcr.io
+name: Build and publish a Docker image
 on:
   push:
     branches:
       - main
+
+permissions:
+  packages: write
 
 jobs:
   docker_publish:
@@ -14,3 +17,5 @@ jobs:
         with:
           image_name: ${{ github.repository }}  # it will be lowercased internally
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          docker_io_token: ${{ secrets.DOCKERHUB_TOKEN }}
+          docker_io_user: ${{ secrets.DOCKERHUB_USERNAME }}
