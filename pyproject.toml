@@ -9,7 +9,7 @@ authors = [
     {name = "jackzzs", email = "jackzzs@outlook.com"},
 ]
 license = {file="LICENSE"}
-description = "A Cloudflare/Turnstile captcha bypass api server."
+description = "A Cloudflare/Turnstile captcha bypass API server."
 keywords = [
     "python",
     "recaptcha",
