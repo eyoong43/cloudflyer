@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 USER root
 RUN add-apt-repository universe && \
     apt-get update && \
-    apt-get install python3.10 && \
+    apt-get install -y python3.10 && \
     apt-get install -y \
         wget \
         gnupg \
