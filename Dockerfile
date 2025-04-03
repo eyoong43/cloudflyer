@@ -40,8 +40,8 @@ RUN wget https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-
     dpkg -i google-chrome-stable_126.0.6478.126-1_amd64.deb && \
     rm google-chrome-stable_126.0.6478.126-1_amd64.deb
 
-# Install Python dependencies
-RUN python3.10 -m pip install --upgrade pip
+# Install Pip
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 
 # Set up a working directory
 WORKDIR /app
