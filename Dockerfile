@@ -6,10 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install necessary packages for Xvfb and pyvirtualdisplay
 USER root
-RUN apt-get update && \
+RUN add-apt-repository universe && \
+    apt-get update && \
+    apt-get install python3.9 && \
     apt-get install -y \
-        python3 \
-        python3-pip \
         wget \
         gnupg \
         ca-certificates \
@@ -41,7 +41,7 @@ RUN wget https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-
     rm google-chrome-stable_126.0.6478.126-1_amd64.deb
 
 # Install Python dependencies including pyvirtualdisplay
-RUN pip3 install --upgrade pip
+RUN python3.9 -m pip install --upgrade pip
 
 # Set up a working directory
 WORKDIR /app
@@ -50,7 +50,7 @@ WORKDIR /app
 COPY . .
 
 # Install Python dependencies
-RUN pip3 install -e .
+RUN python3.9 -m pip install -e .
 
 # Download wssocks and make it executable
 RUN wget https://github.com/zetxtech/wssocks/releases/download/v1.4.2/wssocks-linux-amd64 -O /app/wssocks && \
