@@ -6,9 +6,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install necessary packages for Xvfb and pyvirtualdisplay
 USER root
-RUN add-apt-repository universe && \
+RUN add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
-    apt-get install -y python3.10 && \
+    apt-get install -y python3.10 python3.10-venv python3.10-dev && \
     apt-get install -y \
         wget \
         gnupg \
@@ -40,7 +40,7 @@ RUN wget https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-
     dpkg -i google-chrome-stable_126.0.6478.126-1_amd64.deb && \
     rm google-chrome-stable_126.0.6478.126-1_amd64.deb
 
-# Install Python dependencies including pyvirtualdisplay
+# Install Python dependencies
 RUN python3.10 -m pip install --upgrade pip
 
 # Set up a working directory
