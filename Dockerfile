@@ -40,7 +40,6 @@ RUN wget -q -O /usr/share/keyrings/google-chrome.gpg https://dl.google.com/linux
 
 # Install Python dependencies including pyvirtualdisplay
 RUN pip3 install --upgrade pip
-RUN pip3 install pyvirtualdisplay
 
 # Set up a working directory
 WORKDIR /app
@@ -49,8 +48,7 @@ WORKDIR /app
 COPY . .
 
 # Install Python dependencies
-RUN pip3 install -r requirements.txt
-RUN pip3 install -r server_requirements.txt
+RUN pip3 install -e .
 
 # Expose the port for remote debugging
 EXPOSE 9222
@@ -59,5 +57,4 @@ EXPOSE 9222
 EXPOSE 8000
 
 # Default command
-CMD ["python3", "server.py"]
-
+ENTRYPOINT ["cloudflyer"]
