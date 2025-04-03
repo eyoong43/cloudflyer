@@ -3,4 +3,4 @@
 exec /dockerstartup/vnc_startup.sh  > /dev/null 2>&1 &
 
 cd /app
-python3.9 -m cloudflyer $@
+python3.10 -m cloudflyer $@
