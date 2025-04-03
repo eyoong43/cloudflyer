@@ -50,7 +50,7 @@ Options:
 Docker:
 
 ```bash
-docker run -it --rm -p 3000:3000 ghcr.io/zetxtech/cloudflyer -K YOUR_CLIENT_KEY
+docker run -it --rm -p 3000:3000 jackzzs/cloudflyer -K YOUR_CLIENT_KEY
 ```
 
 Docker Compose:
@@ -59,7 +59,7 @@ Docker Compose:
 version: 3
 services:
   cloudflyer:
-    image: ghcr.io/zetxtech/cloudflyer
+    image: jackzzs/cloudflyer
     container_name: cloudflyer
     restart: unless-stopped
     ports:
