@@ -45,6 +45,27 @@ Options:
 - `-H, --host`: Server listen host (default: localhost)
 - `-T, --timeout`: Maximum task timeout in seconds (default: 120)
 
+### Docker
+
+Docker:
+
+```bash
+docker run -it --rm -p 3000:3000 ghcr.io/zetxtech/cloudflyer -K YOUR_CLIENT_KEY
+```
+
+Docker Compose:
+
+```yaml
+version: 3
+services:
+  cloudflyer:
+    image: ghcr.io/zetxtech/cloudflyer
+    container_name: cloudflyer
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+```
+
 ## API Endpoints for Server
 
 ### Create Task
