@@ -1,11 +1,11 @@
 # Use the official Ubuntu image as the base image
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM kasmweb/desktop:1.16.0-rolling-daily
 
 # Set environment variables to avoid interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive
-ENV DOCKERMODE=true
 
 # Install necessary packages for Xvfb and pyvirtualdisplay
+USER root
 RUN apt-get update && \
     apt-get install -y \
         python3 \
@@ -30,13 +30,15 @@ RUN apt-get update && \
         libdrm2 \
         xdg-utils \
         xvfb \
+        libasound2 \
+        libcurl4 \
+        libgbm1 \
         && rm -rf /var/lib/apt/lists/*
 
 # Add Google Chrome repository and install Google Chrome
-RUN wget -q -O /usr/share/keyrings/google-chrome.gpg https://dl.google.com/linux/linux_signing_key.pub && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update --allow-insecure-repositories && \
-    apt-get install -y --allow-unauthenticated google-chrome-stable
+RUN wget https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/google-chrome-stable_126.0.6478.126-1_amd64.deb && \
+    dpkg -i google-chrome-stable_126.0.6478.126-1_amd64.deb && \
+    rm google-chrome-stable_126.0.6478.126-1_amd64.deb
 
 # Install Python dependencies including pyvirtualdisplay
 RUN pip3 install --upgrade pip
@@ -50,11 +52,16 @@ COPY . .
 # Install Python dependencies
 RUN pip3 install -e .
 
-# Expose the port for remote debugging
-EXPOSE 9222
+# Download wssocks and make it executable
+RUN wget https://github.com/zetxtech/wssocks/releases/download/v1.4.2/wssocks-linux-amd64 -O /app/wssocks && \
+    chmod +x /app/wssocks
 
 # Expose the port for the FastAPI server
-EXPOSE 8000
+EXPOSE 3000
+
+# Copy and set up startup script
+COPY docker_startup.sh /
+RUN chmod +x /docker_startup.sh
 
 # Default command
-ENTRYPOINT ["cloudflyer"]
+ENTRYPOINT ["/docker_startup.sh"]
