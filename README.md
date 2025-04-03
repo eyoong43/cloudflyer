@@ -64,14 +64,16 @@ Content-Type: application/json
     "scheme": "socks5",
     "host": "127.0.0.1",
     "port": 1080
-    }
+  },
+  "content": false
 }
 ```
 
-1. `userAgent` and `proxy` is optional.
+1. Field `userAgent` and `proxy` is optional.
 2. Supported task types: `CloudflareChallenge`, `Turnstile`, `RecaptchaInvisible`
 3. For `Turnstile` task, `siteKey` is required.
 4. For `RecaptchaInvisible` task, `siteKey` and `action` is required.
+5. For `CloudflareChallenge` task, set `content` to true to get page html in `response`.
 
 Response:
 
@@ -118,7 +120,7 @@ For `Turnstile` task:
 ```
 "response": {
     "token": "..."
-},
+}
 ```
 
 For `CloudflareChallenge` tasks:
@@ -130,8 +132,9 @@ For `CloudflareChallenge` tasks:
     },
     "headers": {
         "User-Agent": "..."
-    }
-},
+    },
+    "content": "..."
+}
 ```
 
 For `RecaptchaInvisible` tasks:
@@ -139,7 +142,7 @@ For `RecaptchaInvisible` tasks:
 ```
 "response": {
     "token": "..."
-},
+}
 ```
 
 ## WSSocks
