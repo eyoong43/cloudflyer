@@ -253,26 +253,36 @@ class Instance:
 
         proxy = task.get("proxy")
         wssocks = None
-        if proxy:
+        if proxy and isinstance(proxy, dict):
             self.mitm.update_proxy(proxy)
         else:
-            wssocks_url = task.get("wssocks", {}).get("url", None)
-            wssocks_token = task.get("wssocks", {}).get("token", None)
-            if wssocks_url and wssocks_token:
-                from .wssocks import WSSocks
-                
-                wssocks = WSSocks()
-                port = get_free_port()
-                if not wssocks.start(wssocks_token, wssocks_url, port):
+            wssocks = task.get("wssocks")
+            if wssocks and isinstance(wssocks, dict):
+                wssocks_url = wssocks.get("url", None)
+                wssocks_token = wssocks.get("token", None)
+                if wssocks_url and wssocks_token:
+                    from .wssocks import WSSocks
+                    
+                    wssocks = WSSocks()
+                    port = get_free_port()
+                    if not wssocks.start(wssocks_token, wssocks_url, port):
+                        return {
+                            "success": False,
+                            "code": 500,
+                            "response": None,
+                            "error": "Fail to connect to the wssocks proxy.",
+                            "data": task,
+                        }
+                    self.mitm.update_proxy({"scheme": "socks5", "host": "127.0.0.1", "port": port})
+                else:
                     return {
                         "success": False,
                         "code": 500,
                         "response": None,
-                        "error": "fail to connect to the wssocks proxy.",
+                        "error": "Either wssocks.url or wssocks.token is not provided.",
                         "data": task,
                     }
-                self.mitm.update_proxy({"scheme": "socks5", "host": "127.0.0.1", "port": port})
-                
+                    
         self.addon.user_agent = task.get("userAgent", None)
         
         try:
@@ -282,7 +292,7 @@ class Instance:
                         "success": False,
                         "code": 500,
                         "response": None,
-                        "error": "siteKey is not provided.",
+                        "error": "Field siteKey is not provided.",
                         "data": task,
                     }
                 else:
@@ -294,7 +304,7 @@ class Instance:
                         "success": False,
                         "code": 500,
                         "response": None,
-                        "error": "siteKey or action is not provided.",
+                        "error": "Field siteKey or action is not provided.",
                         "data": task,
                     }
                 else:
