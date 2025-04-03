@@ -46,11 +46,15 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
 # Set up a working directory
 WORKDIR /app
 
+# Create and activate virtual environment
+RUN python3.10 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
 # Copy application files
 COPY . .
 
-# Install Python dependencies
-RUN python3.10 -m pip install -e .
+# Install Python dependencies in venv
+RUN /app/venv/bin/pip install -e .
 
 # Download wssocks and make it executable
 RUN wget https://github.com/zetxtech/wssocks/releases/download/v1.4.2/wssocks-linux-amd64 -O /app/wssocks && \
