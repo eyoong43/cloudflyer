@@ -171,6 +171,11 @@ def main_cli():
 
     args = parser.parse_args()
 
+    # 如果没有提供子命令，显示帮助信息并退出
+    if not args.command:
+        parser.print_help()
+        return
+
     # Parse proxy string if provided
     proxy = parse_proxy_string(args.proxy) if args.proxy else None
 
