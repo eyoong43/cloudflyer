@@ -1,3 +1,4 @@
+import logging
 from threading import Thread
 import threading
 import time
@@ -6,6 +7,7 @@ import json
 
 from curl_cffi import requests
 
+from cloudflyer.log import apply_logging_adapter
 from cloudflyer.server import main, stop_instances
 
 EXAMPLE_TOKEN = "example_token"
@@ -112,6 +114,8 @@ def turnstile(proxy=None):
     if proxy:
         data["proxy"] = proxy
 
+    print("Task:")
+    print(json.dumps(data, indent=2))
     task_info = create_task(data)
     result = poll_task_result(task_info["taskId"])
     print(f"Turnstile result:\n{json.dumps(result, indent=2)}")

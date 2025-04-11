@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import os
 import time
 from urllib.parse import urlparse
 from importlib import resources
 
+from cachetools import TTLCache
 from mitmproxy.http import HTTPFlow, Response
 from DrissionPage import ChromiumPage, ChromiumOptions
 from DrissionPage.errors import PageDisconnectedError
@@ -72,6 +73,7 @@ class MITMAddon:
         return self.recaptcha_invisible_html_templ.replace("![sitekey]!", site_key).replace("![action]!", action)
     
     def __init__(self) -> None:
+        self.url_cache = TTLCache(maxsize=10000, ttl=timedelta(hours=1).total_seconds())
         self.reset()
         
     def reset(self):
@@ -117,7 +119,18 @@ class MITMAddon:
                 )
             else:
                 self.result = flow.request.data.content.decode()
+                flow.response = Response.make(
+                    200,
+                    b"OK",
+                    {"Content-Type": "text/plain"}
+                )
                 logger.debug("Caught turnstile token using MITM.")
+
+        elif flow.request.pretty_url in self.url_cache:
+            # Replay cached response
+            cached_response = self.url_cache[flow.request.pretty_url]
+            flow.response = cached_response
+            logger.debug(f"Replayed cached response for: {flow.request.pretty_url}")
     
     def responseheaders(self, flow: HTTPFlow):
         # Block certain resource
@@ -182,6 +195,12 @@ class MITMAddon:
                 self._get_recaptcha_invisible_html(self.recaptcha_site_key, self.recaptcha_action).encode(),
                 {"Content-Type": "text/html"},
             )
+            
+        # Cache static urls
+        if flow.request.pretty_url.startswith("https://challenges.cloudflare.com/turnstile/v0/"):
+            url = flow.request.pretty_url
+            self.url_cache[url] = flow.response
+            logger.debug(f"Cached static url: {url}")
 
 class Instance:
     def __init__(
