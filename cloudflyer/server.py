@@ -109,6 +109,7 @@ def process_task(task_id: str):
 
 def main(argl: List[str] = None, ready: threading.Event = None, log: bool = True):
     global instance_pool
+    global client_id
     
     if argl is None:
         argl = sys.argv[1:]
@@ -128,7 +129,9 @@ def main(argl: List[str] = None, ready: threading.Event = None, log: bool = True
     parser.add_argument("-L", "--headless", action="store_true", help="Run browser in headless mode")
     
     args = parser.parse_args(argl)
-    
+
+    client_id = args.clientKey
+
     if args.headless:
         from pyvirtualdisplay import Display
 
