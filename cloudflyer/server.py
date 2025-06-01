@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 instance_pool = None
 tasks = TTLCache(maxsize=10000, ttl=timedelta(days=1).total_seconds())
+client_id = None
 
 class ProxyConfig(BaseModel):
     scheme: str
@@ -53,8 +54,13 @@ async def create_task(request: CreateTaskRequest):
     if request.type == "Turnstile" and not request.siteKey:
         raise HTTPException(status_code=400, detail="siteKey is required for Turnstile tasks")
     
+    
     data = request.model_dump()
-    data.pop("clientKey", None)
+    request_client_id = data.pop("clientKey", None)
+
+    if not request_client_id or request_client_id != client_id:
+        raise HTTPException(status_code=403, detail="Invalid or missing client key")
+    
     task_id = str(uuid.uuid4())
     tasks[task_id] = {
         "status": "processing",
@@ -72,6 +78,11 @@ async def create_task(request: CreateTaskRequest):
 async def get_task_result(request: TaskResultRequest):
     if request.taskId not in tasks:
         raise HTTPException(status_code=404, detail="Task not found")
+    
+    request_client_id = request.clientKey
+
+    if not request_client_id or request_client_id != client_id:
+        raise HTTPException(status_code=403, detail="Invalid or missing client key")
     
     task = tasks[request.taskId]
     return {
@@ -112,7 +123,7 @@ def main(argl: List[str] = None, ready: threading.Event = None, log: bool = True
     parser.add_argument("-K", "--clientKey", required=True, help="Client API key")
     parser.add_argument("-M", "--maxTasks", type=int, default=1, help="Maximum concurrent tasks")
     parser.add_argument("-P", "--port", type=int, default=3000, help="Server listen port")
-    parser.add_argument("-H", "--host", default="localhost", help="Server listen host")
+    parser.add_argument("-H", "--host", default="0.0.0.0", help="Server listen host")
     parser.add_argument("-T", "--timeout", type=int, default=120, help="Maximum task timeout in seconds")
     parser.add_argument("-L", "--headless", action="store_true", help="Run browser in headless mode")
     
