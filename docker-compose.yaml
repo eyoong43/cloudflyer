@@ -1,0 +1,30 @@
+# docker run -it --rm -p 3000:3000 jackzzs/cloudflyer -K HLd1g38CyyqZdLB5UD-6HC3L3ZrNcneZayyZhFWvmrbS_m7ioGFoagFbkQdDUwUeNdKdNktI-kdczNQA
+services:
+  cloudflyer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: codifybites/cloudflyer:latest
+    # image: jackzzs/cloudflyer
+    container_name: cloudflyer
+    env_file:
+      - stack.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cloudflyer.rule=Host(`proxy.cloudflare.codifybites.com`)"
+      - "traefik.http.routers.cloudflyer.entrypoints=websecure,web"
+      - "traefik.http.routers.cloudflyer.tls=true"
+      - "traefik.http.routers.cloudflyer.tls.certresolver=cloudflare"
+      - "traefik.http.services.cloudflyer.loadbalancer.server.port=3000"
+    restart: unless-stopped
+    command: ["-K", "${CLIENT_KEY}", "-L"]
+    environment:
+      - CLIENT_KEY=${CLIENT_KEY}
+    stdin_open: true
+    tty: true
+    networks: 
+      - frontend
+
+networks:
+  frontend:
+    external: true
